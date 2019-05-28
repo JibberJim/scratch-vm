@@ -85,6 +85,11 @@ class Scratch3VideoSensingBlocks {
          */
         this.detect = new VideoMotion();
 
+        this.faceDetector = new FaceDetector();
+
+        this._numFaces=0;
+        this.faceFound=false;
+
         /**
          * The last millisecond epoch timestamp that the video stream was
          * analyzed.
@@ -230,7 +235,7 @@ class Scratch3VideoSensingBlocks {
      * skin, and add a TypedArray copy of the canvas's pixel data.
      * @private
      */
-    _loop () {
+    _loop() {
         setTimeout(this._loop.bind(this), Math.max(this.runtime.currentStepTime, Scratch3VideoSensingBlocks.INTERVAL));
 
         // Add frame to detector
@@ -247,6 +252,15 @@ class Scratch3VideoSensingBlocks {
             if (frame) {
                 this._lastUpdate = time;
                 this.detect.addFrame(frame.data);
+                this.faceDetector.detect(frame).then(faces => faces.map(face => face.boundingBox)).then(faceBoxes => { 
+                        console.log(faceBoxes);
+                        this._numFaces=faceBoxes.length
+                        if (faceBoxes.length==1) {
+                            this.faceFound=true;
+                        } else {
+                            this.faceFound=false;
+                        }
+                    })
             }
         }
     }
@@ -437,6 +451,16 @@ class Scratch3VideoSensingBlocks {
                     }
                 },
                 {
+                    opcode: 'whenFaceDetected',
+                    blockType:BlockType.HAT,
+
+                    text: formatMessage({
+                        id: 'videoSensing.whenFaceDetected',
+                        default: 'Face detected',
+                        description: 'When a face is detected.'
+                    })                        
+                },
+                {
                     opcode: 'videoOn',
                     blockType: BlockType.REPORTER,
                     text: formatMessage({
@@ -505,6 +529,14 @@ class Scratch3VideoSensingBlocks {
         const state = this._getMotionState(target);
         this.detect.getLocalMotion(drawable, state);
         return state;
+    }
+
+    whenFaceDetected(args, util) {
+
+        console.log("whenFaceDetected:"+this.faceFound);
+
+
+        return this.faceFound;
     }
 
     /**
