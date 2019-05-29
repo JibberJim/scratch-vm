@@ -90,6 +90,7 @@ class Scratch3VideoSensingBlocks {
         this._numFaces=0;
         this.faceFound=false;
         this.faceReported=false;
+        this.faceChangeReported=false;
         this.faceLost=false;
 
         /**
@@ -255,23 +256,25 @@ class Scratch3VideoSensingBlocks {
                 this._lastUpdate = time;
                 this.detect.addFrame(frame.data);
                 this.faceDetector.detect(frame).then(faces => faces.map(face => face.boundingBox)).then(faceBoxes => { 
-                        console.log(faceBoxes);
+                        var oldFaces=this._numFaces;
                         this._numFaces=faceBoxes.length
+                        if (oldFaces!=this._numFaces) {
+                            this.faceChangeReported=true;
+                        }
                         if (faceBoxes.length==0 && this.faceFound) {
                             if (!this.faceLost) {
                                 this.faceReported=false;
                             }
+                            this.faceFound=false;
                             this.faceLost=true;
                         }
-                        if (faceBoxes.length==1) {
+                        if (faceBoxes.length>0) {
                             if (!this.faceFound) {
                                 this.faceReported=false;
                             }
                             this.faceLost=false
                             this.faceFound=true;
-                        } else {
-                            this.faceFound=false;
-                        }
+                        } 
                     })
             }
         }
@@ -463,6 +466,16 @@ class Scratch3VideoSensingBlocks {
                     }
                 },
                 {
+                    opcode: 'whenFaceChanged',
+                    blockType:BlockType.HAT,
+
+                    text: formatMessage({
+                        id: 'videoSensing.whenFaceChanged',
+                        default: 'When the number of faces change',
+                        description: 'When the number of faces change'
+                    })                        
+                },
+                {
                     opcode: 'whenFaceDetected',
                     blockType:BlockType.HAT,
 
@@ -481,6 +494,15 @@ class Scratch3VideoSensingBlocks {
                         default: 'Face lost',
                         description: 'When a face is lost.'
                     })                        
+                },
+                {
+                    opcode: 'numFaces',
+                    blockType: BlockType.REPORTER,
+                    text: formatMessage({
+                        id: 'videoSensing.numFaces',
+                        default: 'Number of faces',
+                        description: 'Reporter that returns the number of faces'
+                    })
                 },
                 {
                     opcode: 'videoOn',
@@ -553,6 +575,15 @@ class Scratch3VideoSensingBlocks {
         return state;
     }
 
+
+    whenFaceChanged(args, util) {
+        if  (this.faceChangeReported) {
+            this.faceChangeReported=false;
+            return true;
+        }
+        return false;
+    }
+
     whenFaceDetected(args, util) {
         if (this.faceReported || !this.faceFound) {
             return false;
@@ -567,6 +598,17 @@ class Scratch3VideoSensingBlocks {
         }
         this.faceReported=true;
         return true;
+    }
+
+    /**
+     * A scratch reporter block handle that returns the number of
+     * faces detected
+     * @param {object} args - the block arguments
+     * @param {BlockUtility} util - the block utility
+     * @returns {number} the number of faces.
+     */
+    numFaces(args,util) {
+        return this._numFaces;
     }
 
     /**
