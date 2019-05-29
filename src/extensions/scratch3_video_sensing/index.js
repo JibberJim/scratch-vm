@@ -89,6 +89,8 @@ class Scratch3VideoSensingBlocks {
 
         this._numFaces=0;
         this.faceFound=false;
+        this.faceReported=false;
+        this.faceLost=false;
 
         /**
          * The last millisecond epoch timestamp that the video stream was
@@ -255,7 +257,17 @@ class Scratch3VideoSensingBlocks {
                 this.faceDetector.detect(frame).then(faces => faces.map(face => face.boundingBox)).then(faceBoxes => { 
                         console.log(faceBoxes);
                         this._numFaces=faceBoxes.length
+                        if (faceBoxes.length==0 && this.faceFound) {
+                            if (!this.faceLost) {
+                                this.faceReported=false;
+                            }
+                            this.faceLost=true;
+                        }
                         if (faceBoxes.length==1) {
+                            if (!this.faceFound) {
+                                this.faceReported=false;
+                            }
+                            this.faceLost=false
                             this.faceFound=true;
                         } else {
                             this.faceFound=false;
@@ -461,6 +473,16 @@ class Scratch3VideoSensingBlocks {
                     })                        
                 },
                 {
+                    opcode: 'whenFaceLost',
+                    blockType:BlockType.HAT,
+
+                    text: formatMessage({
+                        id: 'videoSensing.whenFaceLost',
+                        default: 'Face lost',
+                        description: 'When a face is lost.'
+                    })                        
+                },
+                {
                     opcode: 'videoOn',
                     blockType: BlockType.REPORTER,
                     text: formatMessage({
@@ -532,11 +554,19 @@ class Scratch3VideoSensingBlocks {
     }
 
     whenFaceDetected(args, util) {
+        if (this.faceReported || !this.faceFound) {
+            return false;
+        }
+        this.faceReported=true;
+        return true;
+    }
 
-        console.log("whenFaceDetected:"+this.faceFound);
-
-
-        return this.faceFound;
+    whenFaceLost(args, util) {
+        if (this.faceReported || !this.faceLost) {
+            return false;
+        }
+        this.faceReported=true;
+        return true;
     }
 
     /**
